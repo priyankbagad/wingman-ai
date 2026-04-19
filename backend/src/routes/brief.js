@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { supabase } from '../services/supabase.js';
 import { embedText } from '../services/embed.js';
-import { generateBriefing } from '../services/claude.js';
+import { generateBriefing, generateRiskAnalysis, generateTalkTrack } from '../services/claude.js';
+import { fetchNews } from '../services/news.js';
 
 const router = Router();
 
@@ -11,6 +12,9 @@ router.post('/', async (req, res) => {
   if (!company?.trim()) {
     return res.status(400).json({ error: 'company name is required' });
   }
+
+  // Kick off news search immediately — runs in parallel with the full CRM pipeline
+  const newsPromise = fetchNews(company.trim());
 
   // 1. Look up account (case-insensitive)
   const { data: accounts, error: accountErr } = await supabase
@@ -30,27 +34,22 @@ router.post('/', async (req, res) => {
 
   const account = accounts[0];
 
-  // 2. Fetch contacts
-  const { data: contacts, error: contactErr } = await supabase
-    .from('contacts')
-    .select('name, role, email')
-    .eq('account_id', account.id);
-
-  if (contactErr) {
-    console.error('Supabase contacts error:', contactErr);
-    return res.status(500).json({ error: 'Database error fetching contacts' });
-  }
-
-  // 3. Embed the query string
-  let embedding;
+  // 2. Fetch contacts and embed query in parallel — both need the account but not each other
+  let contacts, embedding;
   try {
-    embedding = await embedText(company.trim());
+    const [contactsResult, emb] = await Promise.all([
+      supabase.from('contacts').select('name, role, email').eq('account_id', account.id),
+      embedText(company.trim()),
+    ]);
+    if (contactsResult.error) throw new Error(contactsResult.error.message);
+    contacts = contactsResult.data;
+    embedding = emb;
   } catch (err) {
-    console.error('Gemini embedding error:', err);
-    return res.status(500).json({ error: 'Failed to generate embedding' });
+    console.error('Contacts/embed error:', err);
+    return res.status(500).json({ error: 'Failed to fetch contacts or generate embedding' });
   }
 
-  // 4. Semantic search for top 5 relevant notes via match_notes()
+  // 3. Vector search for top 5 semantically similar notes
   const { data: notes, error: notesErr } = await supabase.rpc('match_notes', {
     query_embedding: embedding,
     filter_account_id: account.id,
@@ -62,7 +61,10 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ error: 'Vector search failed' });
   }
 
-  // 5. Build context string
+  // 4. Await news (started at request-time, almost certainly resolved by now)
+  const news = await newsPromise;
+
+  // 5. Build context — include live news so all 3 Claude calls are news-aware
   const renewalDate = account.renewal_date
     ? new Date(account.renewal_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : 'unknown';
@@ -75,8 +77,11 @@ router.post('/', async (req, res) => {
     .map((n, i) => `Note ${i + 1} [similarity: ${n.similarity?.toFixed(2) ?? 'n/a'}]:\n${n.content}`)
     .join('\n\n');
 
-  const contextText = `
-ACCOUNT
+  const newsText = news.length > 0
+    ? `\n\nRECENT NEWS\n${news.map((n) => `- ${n.title}: ${n.snippet}`).join('\n')}`
+    : '';
+
+  const contextText = `ACCOUNT
 Name: ${account.name}
 Industry: ${account.industry}
 Annual Contract Value: $${account.contract_value?.toLocaleString() ?? 'unknown'}
@@ -87,19 +92,21 @@ CONTACTS
 ${contactsText || 'No contacts on file'}
 
 RELEVANT CRM NOTES (retrieved via semantic search)
-${notesText || 'No notes on file'}
-`.trim();
+${notesText || 'No notes on file'}${newsText}`;
 
-  // 6. Generate briefing with Claude
-  let briefing;
+  // 6. Run all 3 Claude calls in parallel
+  let briefing, risk_analysis, talk_track;
   try {
-    briefing = await generateBriefing(contextText);
+    [briefing, risk_analysis, talk_track] = await Promise.all([
+      generateBriefing(contextText),
+      generateRiskAnalysis(contextText),
+      generateTalkTrack(contextText),
+    ]);
   } catch (err) {
     console.error('Claude API error:', err);
     return res.status(500).json({ error: 'Failed to generate briefing' });
   }
 
-  // 7. Return structured response
   res.json({
     account: {
       id: account.id,
@@ -116,6 +123,9 @@ ${notesText || 'No notes on file'}
       created_at: n.created_at,
     })),
     briefing,
+    risk_analysis,
+    talk_track,
+    news,
   });
 });
 

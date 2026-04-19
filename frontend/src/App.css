@@ -37,6 +37,11 @@
   --green-text:  #166534;
   --green-border:#86efac;
 
+  --yellow-bg:    #fefce8;
+  --yellow-border:#fef08a;
+  --yellow-text:  #854d0e;
+  --yellow-badge: #fef9c3;
+
   --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
   --radius: 10px;
   --card-border: 1.5px solid var(--slate-200);
@@ -512,4 +517,369 @@ body {
   .meta-cell:last-child { border-bottom: none; }
 
   .contacts-grid { grid-template-columns: 1fr; }
+
+  .accounts-grid { grid-template-columns: 1fr; }
+
+  .talk-track { flex-direction: column; gap: 8px; }
+  .track-num  { align-self: flex-start; }
+
+  .ra-header-left { flex-wrap: wrap; }
+}
+
+/* ─── Dashboard ───────────────────────────────────────────────────────────── */
+
+.dashboard {
+  margin-top: 4px;
+}
+
+.section-heading-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-heading {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--navy);
+  letter-spacing: -0.1px;
+}
+
+.section-sub {
+  font-size: 12.5px;
+  color: var(--slate-400);
+}
+
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.acct-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px 14px;
+  background: var(--white);
+  border: 1.5px solid var(--slate-200);
+  border-left-width: 3px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  overflow: hidden;
+}
+
+.acct-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+  transform: translateY(-1px);
+}
+
+.acct-card--active {
+  box-shadow: 0 0 0 2px var(--blue);
+  border-color: var(--blue);
+}
+
+.acct-card--red   { border-left-color: #ef4444; }
+.acct-card--amber { border-left-color: #f59e0b; }
+.acct-card--green { border-left-color: #22c55e; }
+
+.acct-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.acct-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  line-height: 1.3;
+}
+
+.acct-industry {
+  font-size: 12px;
+  color: var(--slate-500);
+}
+
+.acct-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.acct-acv {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate-700);
+}
+
+.acct-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  opacity: 0.35;
+}
+
+.acct-bar--red   { background: #ef4444; }
+.acct-bar--amber { background: #f59e0b; }
+.acct-bar--green { background: #22c55e; }
+
+/* ─── Risk analysis card (Feature 2) ─────────────────────────────────────── */
+
+.card-ra {
+  border-width: 1.5px;
+}
+
+.card-ra--red    { border-color: var(--red-border);    background: var(--red-bg);    }
+.card-ra--amber  { border-color: var(--amber-border);  background: var(--amber-bg);  }
+.card-ra--yellow { border-color: var(--yellow-border); background: var(--yellow-bg); }
+.card-ra--green  { border-color: var(--green-border);  background: var(--green-badge); }
+
+.card-ra .card-header {
+  justify-content: space-between;
+}
+
+.card-ra--red   .card-header { border-color: var(--red-border); }
+.card-ra--amber .card-header { border-color: var(--amber-border); }
+.card-ra--yellow .card-header { border-color: var(--yellow-border); }
+.card-ra--green .card-header { border-color: var(--green-border); }
+
+.ra-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ra-title {
+  font-size: 14px;
+}
+
+.ra-level-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.ra-level--red    { background: var(--red-badge-bg);  color: var(--red-text);   border: 1px solid var(--red-border);  }
+.ra-level--amber  { background: var(--amber-badge);   color: var(--amber-text); border: 1px solid var(--amber-border); }
+.ra-level--yellow { background: var(--yellow-badge);  color: var(--yellow-text);border: 1px solid var(--yellow-border); }
+.ra-level--green  { background: var(--green-badge);   color: var(--green-text); border: 1px solid var(--green-border); }
+
+.ra-score {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ra-score-denom {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.ra-score--red    { color: var(--red-text); }
+.ra-score--amber  { color: var(--amber-text); }
+.ra-score--yellow { color: var(--yellow-text); }
+.ra-score--green  { color: var(--green-text); }
+
+.ra-reasons {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ra-reason {
+  font-size: 13.5px;
+  color: var(--slate-700);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ra-reason::before {
+  content: '—';
+  flex-shrink: 0;
+  color: var(--slate-400);
+}
+
+.ra-recommendation {
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.ra-rec--red    { background: rgba(239,68,68,0.08);  border: 1px solid var(--red-border); }
+.ra-rec--amber  { background: rgba(245,158,11,0.08); border: 1px solid var(--amber-border); }
+.ra-rec--yellow { background: rgba(234,179,8,0.08);  border: 1px solid var(--yellow-border); }
+.ra-rec--green  { background: rgba(34,197,94,0.08);  border: 1px solid var(--green-border); }
+
+.ra-rec-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--slate-400);
+  margin-bottom: 5px;
+}
+
+.ra-rec-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--navy);
+  line-height: 1.55;
+}
+
+/* ─── News pulse card (Feature 3) ────────────────────────────────────────── */
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f0fdf4;
+  border: 1px solid var(--green-border);
+  border-radius: 20px;
+  padding: 3px 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--green-text);
+  letter-spacing: 0.06em;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse 1.8s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+
+.news-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.news-item {
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--slate-100);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.news-item:last-child { border-bottom: none; }
+
+.news-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: none;
+  line-height: 1.4;
+  transition: color 0.15s;
+}
+
+.news-title:hover { color: var(--blue); }
+
+.news-snippet {
+  font-size: 12.5px;
+  color: var(--slate-500);
+  line-height: 1.5;
+}
+
+.news-date {
+  font-size: 11.5px;
+  color: var(--slate-400);
+  margin-top: 2px;
+}
+
+/* ─── Talk track card (Feature 4) ────────────────────────────────────────── */
+
+.talk-tracks {
+  display: flex;
+  flex-direction: column;
+}
+
+.talk-track {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--slate-100);
+}
+
+.talk-track:last-child { border-bottom: none; }
+
+.track-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--slate-100);
+  border: 1px solid var(--slate-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--slate-600);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.track-text {
+  flex: 1;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--slate-700);
+  font-style: italic;
+}
+
+.copy-btn {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--white);
+  border: 1px solid var(--slate-300);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font);
+  color: var(--slate-600);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  margin-top: 2px;
+}
+
+.copy-btn:hover {
+  background: var(--slate-50);
+  border-color: var(--slate-400);
+  color: var(--navy);
+}
+
+.copy-btn--done {
+  background: var(--green-badge);
+  border-color: var(--green-border);
+  color: var(--green-text);
 }
