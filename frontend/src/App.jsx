@@ -10,8 +10,7 @@ import { Landing } from './pages/Landing'
 import { CrmSelect, CRM_CONFIG } from './pages/CrmSelect'
 import { Card, CardHeader, CardContent } from './components/ui/card'
 import { Badge } from './components/ui/badge'
-
-const API_BASE = 'http://localhost:3001'
+import API_BASE from './config'
 
 // ─── Error boundary ───────────────────────────────────────────────────────────
 
