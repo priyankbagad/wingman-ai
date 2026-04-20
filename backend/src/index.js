@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import briefRouter from './routes/brief.js';
 import accountsRouter from './routes/accounts.js';
+import crmRouter from './routes/crm.js';
 
 const REQUIRED_ENV = [
   'SUPABASE_URL',
@@ -32,6 +33,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/accounts', accountsRouter);
 app.use('/api/brief', briefRouter);
+app.use('/api/crm', crmRouter);
 
 app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
 

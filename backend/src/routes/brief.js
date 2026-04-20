@@ -7,11 +7,78 @@ import { fetchNews } from '../services/news.js';
 const router = Router();
 
 router.post('/', async (req, res) => {
-  const { company } = req.body;
+  const { company, crmAccount } = req.body;
 
   if (!company?.trim()) {
     return res.status(400).json({ error: 'company name is required' });
   }
+
+  // ── CRM fast-path: account data supplied directly, skip Supabase ─────────
+  if (crmAccount) {
+    const newsPromise = fetchNews(company.trim());
+
+    const renewalDate = crmAccount.renewal_date
+      ? new Date(crmAccount.renewal_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : 'unknown';
+
+    const contactsText = (crmAccount.contacts ?? [])
+      .map((c) => `- ${c.name} (${c.role}) — ${c.email}`)
+      .join('\n');
+
+    const notesText = (crmAccount.notes ?? [])
+      .map((n, i) => `Note ${i + 1} [${n.type}]:\n${n.content}`)
+      .join('\n\n');
+
+    const news = await newsPromise;
+    const newsText = news.length > 0
+      ? `\n\nRECENT NEWS\n${news.map((n) => `- ${n.title}: ${n.snippet}`).join('\n')}`
+      : '';
+
+    const contextText = `ACCOUNT
+Name: ${crmAccount.name}
+Industry: ${crmAccount.industry}
+Annual Contract Value: $${crmAccount.contract_value?.toLocaleString() ?? 'unknown'}
+Renewal Date: ${renewalDate}
+Health Score: ${crmAccount.health_score}/10
+Source CRM: ${crmAccount.source ?? 'unknown'}
+
+CONTACTS
+${contactsText || 'No contacts on file'}
+
+CRM NOTES
+${notesText || 'No notes on file'}${newsText}`;
+
+    let briefing, risk_analysis, talk_track;
+    try {
+      [briefing, risk_analysis, talk_track] = await Promise.all([
+        generateBriefing(contextText),
+        generateRiskAnalysis(contextText),
+        generateTalkTrack(contextText),
+      ]);
+    } catch (err) {
+      console.error('Claude API error (CRM path):', err);
+      return res.status(500).json({ error: 'Failed to generate briefing' });
+    }
+
+    return res.json({
+      account: {
+        id:             crmAccount.id,
+        name:           crmAccount.name,
+        industry:       crmAccount.industry,
+        contract_value: crmAccount.contract_value,
+        renewal_date:   crmAccount.renewal_date,
+        health_score:   crmAccount.health_score,
+      },
+      contacts:   crmAccount.contacts ?? [],
+      notes_used: [],
+      briefing,
+      risk_analysis,
+      talk_track,
+      news,
+    });
+  }
+
+  // ── Supabase fallback path ────────────────────────────────────────────────
 
   // Kick off news search immediately — runs in parallel with the full CRM pipeline
   const newsPromise = fetchNews(company.trim());
