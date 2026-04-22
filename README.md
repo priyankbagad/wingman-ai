@@ -7,6 +7,12 @@
 
 ---
 
+## Video Walkthrough
+
+Link for the video : [Link here]
+
+---
+
 ## Problem Statement
 
 A friend of mine has been in B2B sales for ten years. He is genuinely good at his job but he still spends 30 minutes before every call piecing together account context from a dozen different places. He opens Salesforce, scrolls through notes, Googles the company, checks his email threads, and tries to remember what was said two calls ago. Watching him do this is what made me want to build Wingman.
