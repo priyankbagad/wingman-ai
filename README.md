@@ -9,6 +9,8 @@
 
 ## Problem Statement
 
+A friend of mine has been in B2B sales for ten years. He is genuinely good at his job but he still spends 30 minutes before every call piecing together account context from a dozen different places. He opens Salesforce, scrolls through notes, Googles the company, checks his email threads, and tries to remember what was said two calls ago. Watching him do this is what made me want to build Wingman.
+
 Sales reps do a lot of invisible work before every call. They dig through CRM notes, Google the company, check LinkedIn, and try to piece together a coherent picture of the account from a dozen different places. This easily takes 30 to 60 minutes per meeting, and even after all of that, the briefing they walk in with is usually incomplete or stale.
 
 The people most affected are B2B SaaS account executives and customer success managers with large books of business. When you have 10 to 15 accounts on the calendar each week, that prep time adds up fast, and it is time taken directly away from selling.
@@ -80,7 +82,7 @@ Briefing length is hard to control. Claude sometimes writes more than a rep want
                                                          +-----------------+
 ```
 
-**Multi-CRM adapter layer:** Real CRM data is inconsistent across vendors. Salesforce uses `FirstName` + `LastName`, HubSpot nests everything under `properties.*`, and Pipedrive stores emails as an array. Rather than scattering vendor-specific logic throughout the codebase, I built an adapter layer that normalizes all three to a single internal schema before any business logic runs. Adding a fourth CRM requires one new adapter file and nothing else.
+**Multi-CRM adapter layer:** Real CRM data is inconsistent across vendors. Salesforce uses `FirstName` + `LastName`, HubSpot nests everything under `properties.*`, and Pipedrive stores emails as an array. Rather than scattering vendor-specific logic throughout the codebase, I built an adapter layer that normalizes all three to a single internal schema before any business logic runs. Adding a fourth CRM requires one new adapter file and nothing else. The adapters currently work with mock records that simulate each CRM's API response shape. In a production version, the adapters would receive data from a live OAuth-authenticated API call. The business logic and normalization layer do not change at all — wiring up real data is an integration step, not a rewrite.
 
 **Parallel Claude calls:** The briefing, risk analysis, and talk track run in a single `Promise.all`. This keeps user-facing latency to roughly the cost of one LLM call instead of three sequential ones.
 
