@@ -1,4 +1,4 @@
-# Wingman — AI Meeting Prep Agent
+# Wingman -- AI Meeting Prep Agent
 
 > Your AI co-pilot before every sales call.
 
@@ -7,125 +7,104 @@
 
 ---
 
-## What it does
+## Problem Statement
 
-Sales reps spend hours before every call digging through CRM notes, Googling recent news, and piecing together account context — only to walk into the meeting with a patchwork of information that may be incomplete or stale. Wingman solves this by generating a complete, structured pre-meeting brief in seconds, pulling from CRM data, live news, and AI reasoning all at once.
+Sales reps do a lot of invisible work before every call. They dig through CRM notes, Google the company, check LinkedIn, and try to piece together a coherent picture of the account from a dozen different places. This easily takes 30 to 60 minutes per meeting, and even after all of that, the briefing they walk in with is usually incomplete or stale.
 
-Wingman connects to your CRM (Salesforce, HubSpot, or Pipedrive), retrieves the account's full history using semantic vector search, fetches live news about the company, and hands everything to Claude to generate a human-readable briefing. The output includes an account overview, a risk score with reasoning, specific talk track opening lines, and the five most relevant CRM notes ranked by semantic similarity — not just recency.
+The people most affected are B2B SaaS account executives and customer success managers with large books of business. When you have 10 to 15 accounts on the calendar each week, that prep time adds up fast, and it is time taken directly away from selling.
 
-What makes Wingman different is the combination of RAG-powered retrieval and multi-model AI reasoning. Rather than summarizing a flat dump of notes, Wingman uses Gemini embeddings to surface the most contextually relevant information before Claude ever sees it. The result is a briefing that reads like it was written by a colleague who actually did the research.
+The problem is not that reps do not care. It is that the information they need is scattered across CRM notes, news articles, and email threads, and there is no good way to quickly synthesize it into something actionable.
 
----
-
-## Features
-
-| Feature | Description |
-|---|---|
-| **Instant AI Briefing** | Structured pre-meeting brief generated from CRM data, contacts, and notes |
-| **Risk Scoring** | Claude scores each account 1–10 (Critical / High / Medium / Low) with specific reasons |
-| **Live News Pulse** | Real-time Google News headlines fetched via Serper before every meeting |
-| **Verbatim Talk Tracks** | 3 specific, human-sounding opening lines tailored to each account's situation |
-| **Semantic CRM Search** | pgvector RAG retrieves the top 5 most relevant notes by cosine similarity |
-| **Multi-CRM Support** | Salesforce, HubSpot, and Pipedrive normalized through a vendor adapter layer |
+Wingman solves this by generating a complete pre-meeting brief in under 10 seconds. Success looks like this: a rep opens Wingman five minutes before a call, reads the brief, and walks in knowing the account health, recent company news, the biggest risks to the relationship, and three specific opening lines tailored to that account. The measure is simple: prep time drops from 30 to 60 minutes to under a minute, and the rep walks in better prepared, not just faster.
 
 ---
 
-## Architecture
+## Solution Overview
 
-```
-┌─────────────────────┐         ┌─────────────────────────────────┐
-│   Frontend          │         │   Backend                       │
-│   React + Vite      │──────→  │   Node.js + Express             │
-│   Vercel            │         │   Railway                       │
-└─────────────────────┘         └────────────┬────────────────────┘
-                                             │
-              ┌──────────────────────────────┼──────────────────────┐
-              │                              │                      │
-              ▼                              ▼                      ▼
-   ┌─────────────────┐          ┌────────────────────┐   ┌──────────────────┐
-   │  Supabase       │          │  Google Gemini     │   │  Anthropic       │
-   │  PostgreSQL     │          │  text-embedding    │   │  Claude Sonnet   │
-   │  + pgvector     │          │  768-dim vectors   │   │  Briefing + Risk │
-   └─────────────────┘          └────────────────────┘   └──────────────────┘
-                                                                   │
-                                                          ┌────────▼─────────┐
-                                                          │  Serper API      │
-                                                          │  Google News     │
-                                                          │  (live results)  │
-                                                          └──────────────────┘
-```
+Wingman connects to a CRM (Salesforce, HubSpot, or Pipedrive), pulls the account's full history using semantic vector search, fetches live news about the company, and sends everything to Claude to generate a structured briefing. The output includes an account overview, a risk score with specific reasoning, verbatim talk track opening lines, and the five most relevant CRM notes ranked by semantic similarity rather than recency.
+
+AI is not supplementary here. It is the core of the product. Without AI, you get a data dump. With AI, you get judgment: which notes actually matter for this meeting, what the risk signals are, and what to say when you open the call.
+
+What makes this meaningfully better than a non-AI approach: traditional CRM reporting surfaces everything chronologically, which means a rep has to read through 15 notes to find the two that matter. Wingman uses semantic search to surface the most contextually relevant notes first, then Claude reasons over that curated context to produce something that reads like it was written by a colleague who actually did the research.
 
 ---
 
-## Tech Stack
+## AI Integration
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Frontend** | React 18 + Vite + Tailwind CSS v4 | SPA with dark-theme UI |
-| **UI Components** | shadcn/ui + Aceternity UI | Spotlight cards, hover effects, animated components |
-| **Animation** | Motion (Framer Motion) + Three.js | Canvas reveal, lamp effect, noise background |
-| **Backend** | Node.js + Express | REST API, orchestration layer |
-| **Database** | Supabase PostgreSQL + pgvector | Account storage + vector similarity search |
-| **Embeddings** | Google Gemini `gemini-embedding-001` | 768-dim note embeddings for RAG |
-| **AI Reasoning** | Anthropic Claude `claude-sonnet-4-6` | Briefing generation, risk scoring, talk tracks |
-| **News** | Serper API (Google News) | Live pre-meeting company intelligence |
-| **Deployment** | Vercel (frontend) + Railway (backend) | Production hosting |
-| **DNS** | GoDaddy custom domain | `wingman.priyankbagad.com` |
+**Models and APIs:**
+- Google Gemini `gemini-embedding-001` for generating 768-dimensional note embeddings
+- Anthropic Claude `claude-sonnet-4-6` for briefing generation, risk analysis, and talk track generation
+- Serper API for live Google News results
+- Supabase pgvector for vector similarity search at query time
 
----
+**Why these choices:**
+I chose Gemini for embeddings because it offers strong quality on a generous free tier, and 768 dimensions hit a good balance between accuracy and storage cost. I chose Claude for the reasoning layer because it produces reliable structured JSON output. The risk analysis and talk track both need to come back in a specific schema, and Claude handles that consistently without needing fragile parsing logic.
 
-## How it Works
+**Patterns used:**
+This is a RAG pipeline with parallel multi-step reasoning. The flow is: embed the query, retrieve the top-5 semantically similar notes via cosine similarity, then fan out to three parallel Claude calls (briefing, risk analysis, talk track) so the total latency stays close to the cost of one call. All three run inside a single `Promise.all`, which brings end-to-end time down to roughly 3 to 5 seconds instead of 12.
 
-Wingman uses a retrieval-augmented generation (RAG) pipeline to ensure Claude only reasons over the most relevant context for each meeting.
+**Tradeoffs considered:**
+- Cost per briefing lands around $0.002 to $0.004 depending on note length. That is acceptable for a sales tool where the time saved per call is worth far more.
+- Using two AI providers adds operational complexity. The split makes sense because Gemini's embedding model outperforms what was available through the Anthropic API for this use case, but it does mean two API keys and two failure modes to handle.
+- The three Claude calls in `Promise.all` mean that if one fails, all three fail. I made this call deliberately: displaying a briefing without a risk score would be confusing and harder to debug than a clean error message.
 
-**1. Store CRM data**
-Account records, contacts, and notes are stored in Supabase PostgreSQL. Each note captures call summaries, email threads, meeting recaps, and deal context as free text.
+**Where AI exceeded expectations:**
+The talk track output surprised me. I expected generic openers but the prompts I landed on produce lines that reference specific details from CRM notes, including names, dates, and incidents. That specificity is what makes them actually usable on a call.
 
-**2. Embed notes with Gemini**
-A backfill script runs `gemini-embedding-001` on every note and stores the resulting 768-dimension vector in a `pgvector` column. An IVFFlat index enables fast approximate nearest-neighbor search.
-
-**3. Embed the query**
-When a user opens an account, the company name is embedded using the same Gemini model, producing a query vector in the same 768-dim space.
-
-**4. Retrieve top-5 semantically similar notes**
-pgvector's cosine distance operator finds the five notes most semantically similar to the query — not just the five most recent. The `match_notes` SQL function returns each note with its similarity score.
-
-**5. Generate the briefing**
-Claude receives the full account context and runs three parallel inference calls to produce the briefing, risk analysis, and talk track simultaneously.
-
-```
-Account metadata
-+ Contacts
-+ Top-5 semantic notes          →  Claude (3x parallel)  →  Briefing (Markdown)
-+ Live news (Serper)                                         Risk Score + Reasons
-                                                             Talk Track (3 lines)
-```
+**Where it fell short:**
+Briefing length is hard to control. Claude sometimes writes more than a rep wants to read in five minutes before a call. I iterated on the system prompt several times and got it tighter, but it never fully settled. In a production version I would add a user-configurable length preference passed directly into the prompt.
 
 ---
 
-## Multi-CRM Architecture
-
-Real-world CRM data is messy: Salesforce uses `FirstName` + `LastName`, HubSpot nests everything under `properties.*`, and Pipedrive stores emails as an array. Wingman's adapter layer normalizes all three vendors to a single internal schema before any business logic runs.
+## Architecture and Design Decisions
 
 ```
-Salesforce raw data  →  SalesforceAdapter  ─┐
-HubSpot raw data     →  HubSpotAdapter     ──┼──→  Wingman internal schema  →  Backend
-Pipedrive raw data   →  PipedriveAdapter   ─┘
++---------------------+         +---------------------------------+
+|   Frontend          |         |   Backend                       |
+|   React + Vite      |-------> |   Node.js + Express             |
+|   Vercel            |         |   Railway                       |
++---------------------+         +----------------+----------------+
+                                                 |
+              +----------------------------------+-------------------+
+              |                                 |                   |
+              v                                 v                   v
+   +------------------+          +--------------------+   +-----------------+
+   |  Supabase        |          |  Google Gemini     |   |  Anthropic      |
+   |  PostgreSQL      |          |  text-embedding    |   |  Claude Sonnet  |
+   |  + pgvector      |          |  768-dim vectors   |   |  Briefing+Risk  |
+   +------------------+          +--------------------+   +-----------------+
+                                                                  |
+                                                         +--------v--------+
+                                                         |  Serper API     |
+                                                         |  Google News    |
+                                                         +-----------------+
 ```
 
-Each adapter exposes three functions:
+**Multi-CRM adapter layer:** Real CRM data is inconsistent across vendors. Salesforce uses `FirstName` + `LastName`, HubSpot nests everything under `properties.*`, and Pipedrive stores emails as an array. Rather than scattering vendor-specific logic throughout the codebase, I built an adapter layer that normalizes all three to a single internal schema before any business logic runs. Adding a fourth CRM requires one new adapter file and nothing else.
 
-| Function | Maps from | Maps to |
-|---|---|---|
-| `adaptAccounts()` | Vendor account fields | `{ id, name, industry, contractValue, renewalDate, healthScore }` |
-| `adaptContacts()` | Vendor contact fields | `{ name, role, email, isPrimary }` |
-| `adaptNotes()` | Vendor activity/engagement fields | `{ content, createdAt, type }` |
+**Parallel Claude calls:** The briefing, risk analysis, and talk track run in a single `Promise.all`. This keeps user-facing latency to roughly the cost of one LLM call instead of three sequential ones.
 
-The backend never checks which CRM the data came from — it always receives the same normalized schema. Adding a new CRM requires only a single adapter file.
+**pgvector over full-text search:** CRM notes are written inconsistently. A note that says "Sarah mentioned budget concerns" should surface when the query is about financial risk, even though it never uses those words. Semantic vector search handles this. An IVFFlat index on the embedding column keeps search fast as the notes table grows.
+
+**CRM fast-path:** When a user comes through the CRM selection flow, the account data is already in memory from the adapter normalization step. The backend has a fast-path that skips the Supabase lookup entirely and uses the CRM data directly, cutting database round trips in half for that flow.
+
+**Assumptions made:** The demo uses mock CRM records rather than live OAuth integrations. In a real deployment, the adapters would receive data from a live CRM API call. The interface is identical, so wiring up real data is a matter of adding OAuth, not rewriting business logic.
 
 ---
 
-## Local Development
+## What AI Helped Me Build Faster
+
+I used Claude Code throughout this project as my primary coding tool.
+
+**Where it moved fast:** Boilerplate I knew the shape of but did not want to type out. Express route scaffolding, Tailwind component structure, the SQL schema and seed data. I described what I wanted and got back something close to correct on the first try. The multi-CRM adapter pattern was something I sketched conceptually, and once Claude Code understood the normalization goal, it generated all three adapter files quickly. Writing the Vitest mock setup for Supabase's chained calls (`.from().select().ilike().limit()`) was another place where it saved real time -- getting that chainable mock structure right by hand would have taken a frustrating amount of trial and error.
+
+**Where it got in the way:** Prompt engineering for the Claude services was something I had to own entirely. AI coding tools generate code that calls LLMs, but they cannot tell you whether the LLM output is actually good. I went through many versions of the risk analysis and talk track prompts by running them manually and reading the output. The tool also had a tendency to over-engineer things. Early versions of the backend had abstraction layers I did not ask for and did not need, and I spent time removing them.
+
+**How it changed my approach:** I wrote less throw-away exploratory code and more working code from the start. The cost of "let me just try this approach" dropped enough that I explored design options I might have skipped in a weekend project. The CRM adapter pattern is a good example of that. I would not have built that abstraction without AI assistance making the scaffolding fast enough to be worth doing.
+
+---
+
+## Getting Started
 
 ### Prerequisites
 
@@ -133,7 +112,7 @@ The backend never checks which CRM the data came from — it always receives the
 - [Supabase](https://supabase.com) project (free tier works)
 - [Anthropic API key](https://console.anthropic.com)
 - [Google AI Studio API key](https://aistudio.google.com) (Gemini)
-- [Serper API key](https://serper.dev) *(optional — News Pulse disabled without it)*
+- [Serper API key](https://serper.dev) *(optional -- News Pulse is disabled without it)*
 
 ### Setup
 
@@ -198,7 +177,7 @@ All variables go in `backend/.env`.
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key for admin DB access |
 | `GEMINI_API_KEY` | Yes | Google AI Studio key for `gemini-embedding-001` |
 | `ANTHROPIC_API_KEY` | Yes | Anthropic key for Claude `claude-sonnet-4-6` |
-| `SERPER_API_KEY` | No | Serper key for live Google News — News Pulse disabled if unset |
+| `SERPER_API_KEY` | No | Serper key for live Google News (News Pulse disabled if unset) |
 | `PORT` | No | HTTP port for Express (defaults to `3001`) |
 
 Frontend environment (`frontend/.env.local`):
@@ -209,17 +188,82 @@ Frontend environment (`frontend/.env.local`):
 
 ---
 
+## Demo
+
+The live app is at [wingman.priyankbagad.com](https://wingman.priyankbagad.com).
+
+**To try the demo:**
+
+1. Open the app and pick a CRM from the landing screen (Salesforce, HubSpot, or Pipedrive).
+2. Select an account from the dashboard. Each one is a different scenario:
+
+| Account | Health | Scenario |
+|---|---|---|
+| Meridian Logistics | 3/10 | Churn risk. Best demo account -- lots of red flags in the notes. |
+| Vantage Retail Co. | 1/10 | Critical. Win-back scenario, account is nearly gone. |
+| Helix Biotech | 9/10 | Healthy expansion candidate. Good for showing the contrast. |
+| Crestwood Media | 6/10 | Stable but with UX concerns surfacing in recent notes. |
+| Pinnacle Legal Group | 4/10 | At-risk, low engagement. |
+
+3. Click "Generate Brief" and wait 3 to 5 seconds.
+4. The brief includes an account overview, a risk score with specific reasons, live news headlines, the five most relevant CRM notes ranked by semantic similarity, and three verbatim talk track lines.
+
+To test the Supabase path directly without going through the CRM selection flow:
+```bash
+curl -X POST http://localhost:3001/api/brief \
+  -H "Content-Type: application/json" \
+  -d '{"company": "Meridian Logistics"}'
+```
+
+---
+
+## Testing and Error Handling
+
+Run the full test suite:
+```bash
+cd backend && npm test
+```
+
+There are 55 tests across four files, all passing with no live API calls required.
+
+**Adapter tests** (`src/adapters/__tests__/`) cover each CRM normalization function: valid input, empty arrays, missing optional fields, and vendor-specific behavior like HubSpot's nested `properties.*` structure, Pipedrive's email array format, and HubSpot's engagement type lowercasing. These are pure unit tests with no mocking.
+
+**Brief route tests** (`src/routes/__tests__/brief.test.js`) cover both execution paths with all four external services mocked (Supabase, Gemini, Claude, Serper). Error cases covered:
+
+- Missing or whitespace-only company name (400)
+- Account not found in database (404)
+- Supabase connection failure on account lookup (500)
+- Contacts fetch failure (500)
+- pgvector search failure (500)
+- Claude API failure on both the Supabase path and the CRM fast-path (500)
+- Empty notes and empty news returning gracefully without errors
+- CRM fast-path correctly skipping Supabase entirely
+
+The main production failure mode worth flagging: since the three Claude calls run in `Promise.all`, one timeout takes down all three. This is intentional. A briefing missing its risk score is more confusing for a user than a clean error message with a retry option.
+
+---
+
+## Future Improvements
+
+**Real CRM OAuth integrations.** The adapters are already built for live data, but the app currently uses mock records. Connecting to the actual Salesforce or HubSpot API would make this production-ready. The normalization layer does not need to change at all.
+
+**Briefing length control.** A user preference (brief vs. detailed) passed into the Claude system prompt would make the output more useful across different rep styles. Some people want three bullet points; others want a full page.
+
+**Embedding freshness.** The backfill script runs once at setup. A webhook or scheduled job that re-embeds new notes as they land in the CRM would keep the semantic search current without manual steps.
+
+**Saved briefings.** Right now the briefing disappears when you navigate away. Storing generated briefings in Supabase would let reps review prep from past meetings and track how account health changes over time.
+
+**Calendar or Slack integration.** The highest-value delivery for a pre-meeting brief is probably not a web app. Sending the brief automatically 30 minutes before a calendar event would make it truly zero-effort for the rep.
+
+---
+
 ## API Reference
 
 ### `GET /health`
 
-Health check.
-
 ```json
 { "status": "ok" }
 ```
-
----
 
 ### `GET /api/accounts`
 
@@ -240,8 +284,6 @@ Returns all accounts stored in Supabase.
 }
 ```
 
----
-
 ### `POST /api/brief`
 
 Generates a complete pre-meeting briefing for an account.
@@ -250,12 +292,12 @@ Generates a complete pre-meeting briefing for an account.
 ```json
 {
   "company": "Meridian Logistics",
-  "crmAccount": { }
+  "crmAccount": {}
 }
 ```
 
-`company` (string, required) — Account name to search.  
-`crmAccount` (object, optional) — If provided from a CRM flow, skips Supabase lookup and uses this data directly.
+`company` (string, required) -- Account name to search.
+`crmAccount` (object, optional) -- If provided from a CRM flow, skips Supabase lookup and uses this data directly.
 
 **Response**
 ```json
@@ -268,7 +310,7 @@ Generates a complete pre-meeting briefing for an account.
     "health_score": 3
   },
   "contacts": [
-    { "name": "Jordan Kim", "role": "VP Operations", "email": "jkim@meridian.com", "is_primary": true }
+    { "name": "Jordan Kim", "role": "VP Operations", "email": "jkim@meridian.com" }
   ],
   "notes_used": [
     { "content": "...", "similarity": 0.89, "created_at": "2024-11-01" }
@@ -281,7 +323,7 @@ Generates a complete pre-meeting briefing for an account.
     "recommendation": "Schedule executive business review before renewal date."
   },
   "talk_track": [
-    "Jordan, I saw the Q3 logistics report — how did the Miami hub expansion land?",
+    "Jordan, I saw the Q3 logistics report -- how did the Miami hub expansion land?",
     "...",
     "..."
   ],
@@ -291,29 +333,15 @@ Generates a complete pre-meeting briefing for an account.
 }
 ```
 
----
-
 ### `GET /api/crm/accounts/:crm`
 
-Returns mock CRM accounts normalized through the adapter layer.
-
-`crm` — one of `salesforce`, `hubspot`, `pipedrive`
-
-```json
-{
-  "crm": "salesforce",
-  "label": "Salesforce",
-  "tier": "Enterprise",
-  "accounts": [{ "id": "...", "name": "...", "contacts": [], "notes": [] }]
-}
-```
+Returns mock CRM accounts normalized through the adapter layer. `crm` is one of `salesforce`, `hubspot`, `pipedrive`.
 
 ---
 
 ## Database Schema
 
 ```sql
--- Accounts
 CREATE TABLE accounts (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name           TEXT NOT NULL,
@@ -324,7 +352,6 @@ CREATE TABLE accounts (
   created_at     TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Contacts
 CREATE TABLE contacts (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -333,7 +360,6 @@ CREATE TABLE contacts (
   email      TEXT
 );
 
--- Notes with pgvector embeddings
 CREATE TABLE notes (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -348,59 +374,61 @@ CREATE INDEX ON notes USING ivfflat (embedding vector_cosine_ops) WITH (lists = 
 
 ---
 
-## Demo Accounts
-
-The seed data covers five B2B scenarios across the health spectrum:
-
-| Account | Industry | Health | Scenario |
-|---|---|---|---|
-| Meridian Logistics | Logistics | 3/10 | Churn risk — hero demo account |
-| Helix Biotech | Biotechnology | 9/10 | Healthy — expansion candidate |
-| Crestwood Media | Media | 6/10 | Stable — UX concerns flagged |
-| Pinnacle Legal Group | Legal Services | 4/10 | At-risk — low engagement |
-| Vantage Retail Co. | Retail | 1/10 | Critical — win-back scenario |
-
----
-
 ## Project Structure
 
 ```
 wingman-ai/
-├── backend/
-│   ├── src/
-│   │   ├── index.js                  # Express entry point
-│   │   ├── routes/
-│   │   │   ├── accounts.js           # GET /api/accounts
-│   │   │   ├── brief.js              # POST /api/brief (RAG pipeline)
-│   │   │   └── crm.js                # GET /api/crm/accounts/:crm
-│   │   ├── services/
-│   │   │   ├── claude.js             # Briefing, risk, talk track generation
-│   │   │   ├── embed.js              # Gemini text embeddings
-│   │   │   ├── news.js               # Serper live news
-│   │   │   └── supabase.js           # DB client
-│   │   ├── adapters/
-│   │   │   ├── salesforce.js
-│   │   │   ├── hubspot.js
-│   │   │   └── pipedrive.js
-│   │   └── scripts/
-│   │       └── backfill-embeddings.js
-│   └── supabase/
-│       ├── schema.sql
-│       └── seed.sql
-└── frontend/
-    └── src/
-        ├── App.jsx                   # State management + routing
-        ├── pages/
-        │   ├── Landing.jsx
-        │   └── CrmSelect.jsx
-        ├── components/ui/            # shadcn/ui primitives
-        └── ui/                       # Aceternity animated components
++-- backend/
+|   +-- src/
+|   |   +-- index.js                  # Express entry point
+|   |   +-- routes/
+|   |   |   +-- accounts.js           # GET /api/accounts
+|   |   |   +-- brief.js              # POST /api/brief (RAG pipeline)
+|   |   |   +-- crm.js                # GET /api/crm/accounts/:crm
+|   |   +-- services/
+|   |   |   +-- claude.js             # Briefing, risk, talk track generation
+|   |   |   +-- embed.js              # Gemini text embeddings
+|   |   |   +-- news.js               # Serper live news
+|   |   |   +-- supabase.js           # DB client
+|   |   +-- adapters/
+|   |   |   +-- salesforce.js
+|   |   |   +-- hubspot.js
+|   |   |   +-- pipedrive.js
+|   |   +-- scripts/
+|   |       +-- backfill-embeddings.js
+|   +-- supabase/
+|       +-- schema.sql
+|       +-- seed.sql
++-- frontend/
+    +-- src/
+        +-- App.jsx                   # State management + routing
+        +-- pages/
+        |   +-- Landing.jsx
+        |   +-- CrmSelect.jsx
+        +-- components/ui/            # shadcn/ui primitives
+        +-- ui/                       # Aceternity animated components
 ```
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Frontend** | React 18 + Vite + Tailwind CSS v4 | SPA with dark-theme UI |
+| **UI Components** | shadcn/ui + Aceternity UI | Spotlight cards, hover effects, animated components |
+| **Animation** | Motion (Framer Motion) + Three.js | Canvas reveal, lamp effect, noise background |
+| **Backend** | Node.js + Express | REST API, orchestration layer |
+| **Database** | Supabase PostgreSQL + pgvector | Account storage + vector similarity search |
+| **Embeddings** | Google Gemini `gemini-embedding-001` | 768-dim note embeddings for RAG |
+| **AI Reasoning** | Anthropic Claude `claude-sonnet-4-6` | Briefing generation, risk scoring, talk tracks |
+| **News** | Serper API (Google News) | Live pre-meeting company intelligence |
+| **Deployment** | Vercel (frontend) + Railway (backend) | Production hosting |
 
 ---
 
 ## Built by
 
-**Priyank Bagad**  
-MS Computer Software Engineering, Northeastern University  
+**Priyank Bagad**
+MS Computer Software Engineering, Northeastern University
 [priyankbagad.com](https://priyankbagad.com) · [LinkedIn](https://linkedin.com/in/priyankbagad) · [GitHub](https://github.com/priyankbagad)
